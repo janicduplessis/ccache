@@ -293,7 +293,6 @@ perform_path_mapping(
   const std::vector<std::pair<fs::path, fs::path>>& path_mapping,
   bool reverse)
 {
-  path = lexically_normal(path);
   for (const auto& [key, value] : path_mapping) {
     const auto& from = reverse ? value : key;
     const auto& to = reverse ? key : value;

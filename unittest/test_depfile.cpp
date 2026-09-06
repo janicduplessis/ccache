@@ -47,6 +47,32 @@ TEST_CASE("depfile::escape_filename")
   CHECK(depfile::escape_filename("foo$bar") == "foo$$bar");
 }
 
+TEST_CASE("mapped dependencies retain escaped filenames in a new checkout")
+{
+  Context seed;
+  seed.config.update_from_map({
+    {"path_mapping", "/checkout-a=/source"}
+  });
+  const auto cached = depfile::map_paths(
+    seed,
+    "object.o: /checkout-a/a\\ b.h /sdk/system.h\n/checkout-a/a\\ b.h:\n",
+    false);
+  Context replay;
+  replay.config.update_from_map({
+    {"path_mapping", "/checkout-b=/source"}
+  });
+  const auto restored = depfile::map_paths(replay, cached, true);
+  CHECK(depfile::tokenize(restored)
+        == std::vector<std::string>{"object.o",
+                                    ":",
+                                    "/checkout-b/a b.h",
+                                    "/sdk/system.h",
+                                    "",
+                                    "/checkout-b/a b.h",
+                                    ":",
+                                    ""});
+}
+
 TEST_CASE("depfile::rewrite_source_paths")
 {
   Context ctx;

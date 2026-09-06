@@ -263,6 +263,10 @@ TEST_CASE("util::perform_path_mapping")
   // Simple mappings
   CHECK(util::perform_path_mapping("/foo/bar", {{"/foo", "/bar"}}) == "/bar/bar");
   CHECK(util::perform_path_mapping("/bar/foo", {{"/bar", "/foo"}}) == "/foo/foo");
+  CHECK(util::perform_path_mapping("/a/link/../h.h", {{"/a", "/mapped"}})
+        == "/mapped/link/../h.h");
+  CHECK(util::perform_path_mapping("/mapped/link/../h.h", {{"/b", "/mapped"}}, true)
+        == "/b/link/../h.h");
 
   // Original path is returned if no mapping occurred
   CHECK(util::perform_path_mapping("/foo/bar", {{"/bar", "/foo"}}) == "/foo/bar");

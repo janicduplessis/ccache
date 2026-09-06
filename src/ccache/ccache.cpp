@@ -1054,9 +1054,19 @@ write_result(Context& ctx,
                               ctx.args_info.included_pch_file)) {
     LOG("PCH file {} missing", ctx.args_info.included_pch_file);
   }
+  std::string mapped_dependencies;
   if (ctx.args_info.generating_dependencies
-      && !serializer.add_file(core::result::FileType::dependency,
-                              ctx.args_info.output_dep)) {
+      && !ctx.config.path_mapping().empty()) {
+    const auto content = util::read_file<std::string>(ctx.args_info.output_dep);
+    if (!content) {
+      return false;
+    }
+    mapped_dependencies = depfile::map_paths(ctx, *content, false);
+    serializer.add_data(core::result::FileType::dependency,
+                        util::to_span(mapped_dependencies));
+  } else if (ctx.args_info.generating_dependencies
+             && !serializer.add_file(core::result::FileType::dependency,
+                                     ctx.args_info.output_dep)) {
     LOG("Dependency file {} missing", ctx.args_info.output_dep);
     return false;
   }
@@ -2171,11 +2181,21 @@ hash_argument(const Context& ctx,
   // waterproof since it only detects newly appearing directories and not newly
   // appearing header files.
   {
+    const bool xclang_path =
+      is_clang && args[i] == "-Xclang" && i + 3 < args.size()
+      && compopt_takes_path(args[i + 1]) && args[i + 2] == "-Xclang";
+    if (xclang_path) {
+      hash.hash_delimiter("arg");
+      hash.hash(args[i++]);
+    }
     std::optional<std::string_view> path;
     bool space_in_between = false;
     std::string compopt;
     if (compopt_takes_path(args[i]) && i + 1 < args.size()) {
       compopt = args[i];
+      if (xclang_path) {
+        ++i;
+      }
       path = args[++i]; // Consume both prefix & path
       space_in_between = true;
     } else {
@@ -2193,6 +2213,10 @@ hash_argument(const Context& ctx,
         // Emulate the behavior at the end of this function
         hash.hash_delimiter("arg");
         hash.hash(compopt);
+        if (xclang_path) {
+          hash.hash_delimiter("arg");
+          hash.hash("-Xclang");
+        }
         hash.hash_delimiter("arg");
         hash.hash(mapped_path);
       } else {
