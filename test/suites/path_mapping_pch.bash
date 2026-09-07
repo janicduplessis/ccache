@@ -8,13 +8,13 @@ SUITE_path_mapping_pch_PROBE() {
     mkdir A
     echo 'int value;' > A/header.h
     touch A/pch.cpp
-    $COMPILER --relocatable-pch -isysroot "$root/A" -Xclang -fno-pch-timestamp -x c++-header -include "$root/A/header.h" -c "$root/A/pch.cpp" -o pch.pch 2>/dev/null || {
+    $COMPILER -std=c++11 --relocatable-pch -isysroot "$root/A" -Xclang -fno-pch-timestamp -x c++-header -include "$root/A/header.h" -c "$root/A/pch.cpp" -o pch.pch 2>/dev/null || {
         echo "compiler cannot create a relocatable PCH"
         return
     }
     mv A B
     echo 'int f() { return value; }' > consumer.cpp
-    if ! $COMPILER --relocatable-pch -isysroot "$root/B" -include-pch pch.pch -c consumer.cpp -o consumer.o 2>/dev/null; then
+    if ! $COMPILER -std=c++11 --relocatable-pch -isysroot "$root/B" -include-pch pch.pch -c consumer.cpp -o consumer.o 2>/dev/null; then
         echo "compiler cannot consume a relocated PCH with the original path missing"
     fi
 }
@@ -51,7 +51,7 @@ HEADER
         fi
         mkdir -p "$build"
         export CCACHE_PATH_MAPPING="$build=/__build:$checkout=/__checkout"
-        flags=(--relocatable-pch -isysroot "$checkout"
+        flags=(-std=c++11 --relocatable-pch -isysroot "$checkout"
                -Xclang -fno-pch-timestamp -ffile-prefix-map="$checkout=/__checkout")
         $CCACHE_COMPILE "${flags[@]}" -MD -MF "$build/pch.d" -c -x c++-header -include "$checkout/inputs/pch.h" "$checkout/inputs/pch.cxx" -o "$build/pch.pch"
         $CCACHE_COMPILE "${flags[@]}" -MD -MF "$build/test.d" -Xclang -include-pch -Xclang "$build/pch.pch" -c "$checkout/source/test.cpp" -o "$build/test.o"
