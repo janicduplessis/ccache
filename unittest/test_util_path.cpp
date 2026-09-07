@@ -262,6 +262,14 @@ TEST_CASE("util::perform_path_mapping")
 
   // Simple mappings
   CHECK(util::perform_path_mapping("/foo/bar", {{"/foo", "/bar"}}) == "/bar/bar");
+  CHECK(util::perform_path_mapping("/root/./foo/h.h", {{"/root/foo", "/mapped"}})
+        == "/root/./foo/h.h");
+  CHECK(util::perform_path_mapping("/root/./foo/h.h", {{"/root", "/mapped"}})
+        == "/mapped/./foo/h.h");
+  CHECK(util::perform_path_mapping("/root/foo/h.h", {{"/root/./foo", "/mapped"}})
+        == "/root/foo/h.h");
+  CHECK(util::perform_path_mapping("/mapped/./foo/h.h", {{"/root", "/mapped"}}, true)
+        == "/root/./foo/h.h");
   CHECK(util::perform_path_mapping("/bar/foo", {{"/bar", "/foo"}}) == "/foo/foo");
   CHECK(util::perform_path_mapping("/a/link/../h.h", {{"/a", "/mapped"}})
         == "/mapped/link/../h.h");
@@ -278,6 +286,12 @@ TEST_CASE("util::perform_path_mapping")
 #ifdef _WIN32
   // Simple mappings
   CHECK(util::perform_path_mapping("D:/path", {{"D:/path", "/new-path"}}) == "/new-path");
+  CHECK(util::perform_path_mapping("C:/root/./foo/h.h", {{"C:/root/foo", "/mapped"}})
+        == "C:/root/./foo/h.h");
+  CHECK(util::perform_path_mapping("C:/ROOT/link/../h.h", {{"c:/root/", "/mapped"}})
+        == "/mapped/link/../h.h");
+  CHECK(util::perform_path_mapping("/MAPPED/link/../h.h", {{"C:/root", "/mapped"}}, true)
+        == "C:/root/link/../h.h");
 
   // Slashes are just component separators when matching,
   // but are still in the underlying strings when mapping.

@@ -296,10 +296,6 @@ perform_path_mapping(
   for (const auto& [key, value] : path_mapping) {
     const auto& from = reverse ? value : key;
     const auto& to = reverse ? key : value;
-    if (!path_starts_with(path, from)) {
-      continue;
-    }
-
     // Skip empty part at the end that originates from a trailing slash.
     auto from_end = from.end();
     if (!from.empty()) {
@@ -307,6 +303,19 @@ perform_path_mapping(
       if (!from_end->empty()) {
         ++from_end;
       }
+    }
+
+    if (std::mismatch(path.begin(),
+                      path.end(),
+                      from.begin(),
+                      from_end,
+                      [](fs::path a, fs::path b) {
+                        return path_components_equal_case_aware(
+                          a.make_preferred(), b.make_preferred());
+                      })
+          .second
+        != from_end) {
+      continue;
     }
 
     const auto& suffix =
